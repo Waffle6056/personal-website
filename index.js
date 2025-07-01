@@ -69,8 +69,8 @@ function getOffset(el) {
 }
 
 
-var pageX = 0;
-var pageY = 0;
+var pageX = window.innerWidth/2;
+var pageY = window.innerHeight/2;
 var lastScrollPos = 0;
 
 function update(){
@@ -87,9 +87,10 @@ function setEyeVis(){
         var y = pageY-getOffset(eye).top;
         var len = Math.sqrt(x*x+y*y);
 
-        eye.style.opacity = 1-Math.abs(y*.002);
+        var yPercent = y / window.innerHeight;
+        eye.style.opacity = 1-Math.abs(yPercent*2);
 
-        var eyeLidOffset = "0 "+(-250+Math.min(Math.abs(y),250)+"px");
+        var eyeLidOffset = "0 "+(-250+Math.min(Math.abs(yPercent)*750,250)+"px");
 
         var eyeLidTop = eyelidTopList[i];
         var eyeLidBot = eyelidBotList[i];
