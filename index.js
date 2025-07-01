@@ -56,10 +56,6 @@ function generateEye(){
     eyelidBotList.push(eyeLidBot);
 }
 
-
-for (let i = 0; i < 17; i++)
-    generateEye();
-
 function getOffset(el) {
     const rect = el.getBoundingClientRect();
     return {
@@ -100,7 +96,7 @@ function setEyeVis(){
 }
 
 function movePupils(){
-    console.log("called move pupils");
+    //console.log("called move pupils");
     for (let i = 0; i < pupilList.length; i++){
         var pupil = pupilList[i];
         var x = pageX-getOffset(pupil).left;
@@ -121,6 +117,9 @@ function movePupils(){
     }
 }
 
+for (let i = 0; i < 17; i++)
+    generateEye();
+
 addEventListener("mousemove", (event)=>{
     pageX = event.pageX;
     pageY = event.pageY;
@@ -128,3 +127,9 @@ addEventListener("mousemove", (event)=>{
 
 addEventListener("mousemove", update);
 addEventListener("scroll", update);
+
+var spinList = document.getElementsByClassName("spin");
+for (var i = 0; i < spinList.length; i++){
+    var style = spinList[i].style;
+    style.setProperty("animation-delay",-1000*Math.random()+"s");
+}
