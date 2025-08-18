@@ -11,6 +11,14 @@ function toggle(id){
 }
 
 
+var w = 500; // arbitrary value representing the distance between the user and the screen
+var eyeRadius = 75;
+var minZDistance = 575;
+var maxZDistance = 1000;
+var maxYDistance = 500;
+var maxEyeOpacity = .7;
+var eyeLidHeight = 375;
+var eyeLidMinHeight = 330;
 
 var eyeCon = document.getElementById("eye-generator");
 
@@ -18,6 +26,9 @@ var eyeList = [];
 var pupilList = [];
 var eyelidTopList = [];
 var eyelidBotList = [];
+var pageX = window.innerWidth/2; // global mouse coordiates, defaults to middle of screen
+var pageY = window.innerHeight/2;
+var lastScrollPos = 0;
 
 function generateEye(){
     //console.log("called")
@@ -39,15 +50,14 @@ function generateEye(){
     eye.appendChild(eyeLidBot);
     
 
-    var rat = Math.random();
-    eye.style.scale = (1-rat)*.75+.5;
-    eye.style.setProperty('--parallax-speed', rat * 2000+"px");
+    var distance = minZDistance + Math.random() * maxZDistance;
+    eye.style.zIndex = -Math.round(distance);
+    eye.style.scale = w/distance;
     //console.log(eye.style.getPropertyValue('--parallax-speed'));
     
-    eye.style.top = (Math.random()-.5)*2000+"px";
+    eye.style.top = (Math.random()-.5)*maxYDistance+"px";
     eye.style.left = Math.random()*100+"%";
 
-    eye.style.zIndex = -Math.round(rat*3)-3;
 
     eyeCon.appendChild(eye);
     eyeList.push(eye);
@@ -59,15 +69,11 @@ function generateEye(){
 function getOffset(el) {
     const rect = el.getBoundingClientRect();
     return {
-      left: rect.left + window.scrollX,
-      top: rect.top + window.scrollY
+      x: rect.left + rect.width / 2 + window.scrollX,
+      y: rect.top + rect.height / 2 + window.scrollY
     };
 }
 
-
-var pageX = window.innerWidth/2;
-var pageY = window.innerHeight/2;
-var lastScrollPos = 0;
 
 function update(){
     pageY += window.scrollY - lastScrollPos;
@@ -79,15 +85,18 @@ function update(){
 function setEyeVis(){
     for (let i = 0; i < eyeList.length; i++){
         var eye = eyeList[i];
-        var x = pageX-getOffset(eye).left;
-        var y = pageY-getOffset(eye).top;
-        var len = Math.sqrt(x*x+y*y);
+        //var x = pageX-getOffset(eye).left;
+        var y = pageY-getOffset(eye).y;
+        //var len = Math.sqrt(x*x+y*y);
 
         var yPercent = y / window.innerHeight;
-        eye.style.opacity = 1-Math.abs(yPercent*2);
+        eye.style.opacity = maxEyeOpacity-Math.abs(yPercent);
 
-        var eyeLidOffset = "0 "+(-250+Math.min(Math.abs(yPercent)*750,250)+"px");
-
+        var heightDelta = (eyeLidHeight-eyeLidMinHeight);
+        var openAmt = (yPercent*yPercent)*heightDelta+eyeLidMinHeight;
+        var sum = Math.min(-eyeLidHeight+openAmt,0);
+        var eyeLidOffset = "0 "+sum+"px";
+        //console.log(yPercent);
         var eyeLidTop = eyelidTopList[i];
         var eyeLidBot = eyelidBotList[i];
         eyeLidTop.style.setProperty("object-position",eyeLidOffset);
@@ -95,29 +104,63 @@ function setEyeVis(){
     }
 }
 
+function mul(vec3, scale){
+    return {x: vec3.x*scale, y: vec3.y*scale, z: vec3.z*scale};
+}
+function add(a, b){
+    return {x: a.x+b.x, y: a.y+b.y, z: a.z+b.z};
+}
+function sub(a, b){
+    return {x: a.x-b.x, y: a.y-b.y, z: a.z-b.z};
+}
+function normalize(vec3){
+    var len = Math.sqrt(vec3.x*vec3.x+vec3.y*vec3.y+vec3.z*vec3.z);
+    return mul(vec3, 1/len);
+}
+
+
 function movePupils(){
     //console.log("called move pupils");
+    var mousePos = {x: pageX, y: pageY, z: w}
     for (let i = 0; i < pupilList.length; i++){
+        var eye = eyeList[i];
+        var eyeScreenPos = getOffset(eye); // the pupils position on the screen plane
+        var eyePos = {x: eyeScreenPos.x, y: eyeScreenPos.y, z: w};
+        //console.log(pos.x+" "+pos.y+" "+pos.z+" "+(eye.style.zIndex));
+        eyePos = mul(eyePos, -eye.style.zIndex / w); // the object position without "perspective" applied
+        
+        var dir = normalize(sub(mousePos, eyePos));
+        //console.log(dir.x+" "+dir.y);
         var pupil = pupilList[i];
-        var x = pageX-getOffset(pupil).left;
-        var y = pageY-getOffset(pupil).top;
-        var len = Math.sqrt(x*x+y*y);
-        x /= len;
-        y /= len;
+        
+        var pupilPos = add(eyePos, mul(dir, eyeRadius));
+        //console.log(pupilPos.x+" "+pupilPos.y);
+        var pupilScreenPos = mul(pupilPos, w / pupilPos.z);
 
-        var max = 50;
-        var percent = Math.min(1,len/max);
+        pupil.style.left = (pupilScreenPos.x-eyeScreenPos.x)+"px";
+        pupil.style.top = (pupilScreenPos.y-eyeScreenPos.y)+"px";
 
-        x *= 25 * percent;
-        y *= 25 * percent;
+            // console.log(eyeScreenPos.x+" "+eyeScreenPos.y+" "+w+" eye");
+            // console.log(pupilScreenPos.x+" "+pupilScreenPos.y+" "+pupilScreenPos.z+" pupil");
+            // console.log((pupilScreenPos.x-eyeScreenPos.x)/eyeRadius+" "+(pupilScreenPos.x-eyeScreenPos.x)/eyeRadius+" percent");
 
-        pupil.style.left = x+"%";
-        pupil.style.top = y+"%";
+        // var len = Math.sqrt(x*x+y*y);
+        // x /= len;
+        // y /= len;
+
+        // var max = 50;
+        // var percent = Math.min(1,len/max);
+
+        // x *= 25 * percent;
+        // y *= 25 * percent;
+
+        // pupil.style.left = x+"%";
+        // pupil.style.top = y+"%";
         //console.log(x+" "+y);
     }
 }
 
-for (let i = 0; i < 17; i++)
+for (let i = 0; i < 9; i++)
     generateEye();
 
 addEventListener("mousemove", (event)=>{
