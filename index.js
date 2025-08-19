@@ -16,13 +16,15 @@ var eyeRadius = 75;
 var minZDistance = 575;
 var maxZDistance = 1000;
 var maxYDistance = 500;
-var maxEyeOpacity = .7;
+var maxEyeOpacity = 1;
 var eyeLidHeight = 375;
 var eyeLidMinHeight = 330;
 
 var eyeCon = document.getElementById("eye-generator");
 
 var eyeList = [];
+var eyeYList = [];
+var eyeScaleList = [];
 var pupilList = [];
 var eyelidTopList = [];
 var eyelidBotList = [];
@@ -52,15 +54,18 @@ function generateEye(){
 
     var distance = minZDistance + Math.random() * maxZDistance;
     eye.style.zIndex = -Math.round(distance);
-    eye.style.scale = w/distance;
+    var scale =  w/distance;
+    eye.style.scale = scale;
     //console.log(eye.style.getPropertyValue('--parallax-speed'));
-    
-    eye.style.top = (Math.random()-.5)*maxYDistance+"px";
+    var y = (Math.random()-.5)*maxYDistance
+    eye.style.top = y+"px";
     eye.style.left = Math.random()*100+"%";
 
 
     eyeCon.appendChild(eye);
     eyeList.push(eye);
+    eyeYList.push(y);
+    eyeScaleList.push(scale);
     pupilList.push(pupil);
     eyelidTopList.push(eyeLidTop);
     eyelidBotList.push(eyeLidBot);
@@ -76,11 +81,24 @@ function getOffset(el) {
 
 
 function update(){
-    pageY += window.scrollY - lastScrollPos;
+    var scrollDelta = window.scrollY - lastScrollPos;
+    pageY += scrollDelta;
     lastScrollPos = window.scrollY;
+    moveEyes(scrollDelta);
     movePupils();
     setEyeVis();
 }
+function moveEyes(scrollDelta){
+    for (let i = 0; i < eyeList.length; i++){
+        var eye = eyeList[i];
+        var y = eyeYList[i];
+        var scale = eyeScaleList[i];
+        y -= scrollDelta * (scale);
+        eye.style.top = y + "px";
+        eyeYList[i] = y;
+    }
+}
+
 
 function setEyeVis(){
     for (let i = 0; i < eyeList.length; i++){
@@ -90,7 +108,7 @@ function setEyeVis(){
         //var len = Math.sqrt(x*x+y*y);
 
         var yPercent = y / window.innerHeight;
-        eye.style.opacity = maxEyeOpacity-Math.abs(yPercent);
+        eye.style.opacity = maxEyeOpacity*eyeScaleList[i]-Math.abs(yPercent);
 
         var heightDelta = (eyeLidHeight-eyeLidMinHeight);
         var openAmt = (yPercent*yPercent)*heightDelta+eyeLidMinHeight;
@@ -107,15 +125,23 @@ function setEyeVis(){
 function mul(vec3, scale){
     return {x: vec3.x*scale, y: vec3.y*scale, z: vec3.z*scale};
 }
+function dot(a, b){
+    return a.x*b.x + a.y*b.y + a.z*b.z;
+}
+function angleTo(a,b){
+    return Math.acos(dot(a, b)/length(a)/length(b));
+}
 function add(a, b){
     return {x: a.x+b.x, y: a.y+b.y, z: a.z+b.z};
 }
 function sub(a, b){
     return {x: a.x-b.x, y: a.y-b.y, z: a.z-b.z};
 }
+function length(vec3){
+    return Math.sqrt(vec3.x*vec3.x+vec3.y*vec3.y+vec3.z*vec3.z);
+}
 function normalize(vec3){
-    var len = Math.sqrt(vec3.x*vec3.x+vec3.y*vec3.y+vec3.z*vec3.z);
-    return mul(vec3, 1/len);
+    return mul(vec3, 1/length(vec3));
 }
 
 
@@ -130,15 +156,30 @@ function movePupils(){
         eyePos = mul(eyePos, -eye.style.zIndex / w); // the object position without "perspective" applied
         
         var dir = normalize(sub(mousePos, eyePos));
-        //console.log(dir.x+" "+dir.y);
+        //pupil.style.transform = "scale(1,.5)";
+        //console.log(sub(mousePos, eyeScreenPos));
+        //console.log(eyePos);
+        
         var pupil = pupilList[i];
         
         var pupilPos = add(eyePos, mul(dir, eyeRadius));
         //console.log(pupilPos.x+" "+pupilPos.y);
         var pupilScreenPos = mul(pupilPos, w / pupilPos.z);
+        if (length(sub(pupilScreenPos, eyeScreenPos)) > eyeRadius * eyeScaleList[i])
+            pupilScreenPos = add(eyeScreenPos, mul(sub(pupilScreenPos, eyeScreenPos), eyeRadius * eyeScaleList[i]));
 
         pupil.style.left = (pupilScreenPos.x-eyeScreenPos.x)+"px";
         pupil.style.top = (pupilScreenPos.y-eyeScreenPos.y)+"px";
+        pupil.style.transform = "scale(1,"+Math.cos((pupilScreenPos.x-eyeScreenPos.x)/eyeRadius*Math.PI/2)+")";
+        //console.log(dir);
+
+        var flatDir = normalize(sub(mousePos, {x: eyeScreenPos.x, y:eyeScreenPos.y, z:w}));
+        //console.log(flatDir);
+        var angle = angleTo(flatDir, {x:0, y:-1, z: 0});
+        if (flatDir.x < 0)
+            angle = 2 * Math.PI - angle;
+        //console.log(angle);
+        pupil.style.rotate = angle+"rad";
 
             // console.log(eyeScreenPos.x+" "+eyeScreenPos.y+" "+w+" eye");
             // console.log(pupilScreenPos.x+" "+pupilScreenPos.y+" "+pupilScreenPos.z+" pupil");
@@ -160,7 +201,7 @@ function movePupils(){
     }
 }
 
-for (let i = 0; i < 9; i++)
+for (let i = 0; i < 19; i++)
     generateEye();
 
 addEventListener("mousemove", (event)=>{
