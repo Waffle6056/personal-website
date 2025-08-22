@@ -6,9 +6,11 @@
     padding: 50%;
     /* background-color: red; */
 }
+
 html{
     min-height: 100%;
     position: relative;
+    /* overflow: hidden; */
 }
 body{
     background-color: rgb(24, 24, 24);
@@ -47,6 +49,35 @@ body{
     font-size: 40px;
 }
 
+.hidden{
+    opacity: 0%;
+}
+.elevator{
+    position: fixed;
+    /* max-width: 150px; */
+    height: 15%;
+    left: 0%;
+    right: 0%;
+    margin: auto;
+    /* background-color: red; */
+}
+.arrow {
+    width: 4%;
+    z-index: -1;
+    opacity: 30%
+}
+.rotate-right{
+    transform: rotate(90deg);
+}
+.rotate-left{
+    transform: rotate(-90deg);
+}
+.up {
+    top: 0%;
+}
+.down{
+    top: 85%;
+}
 
 .overlay{
     position: fixed;
